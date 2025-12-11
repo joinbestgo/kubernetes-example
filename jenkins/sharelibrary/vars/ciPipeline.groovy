@@ -5,6 +5,8 @@ def call(Map config = [:]) {
             stage('Checkout Code') {
                 steps {
                     checkout scm
+                    sh 'echo Code Checked Out.'
+                    sh 'whoami' 
                 }
             }
             stage('Run Unit Tests') {
@@ -28,8 +30,13 @@ def call(Map config = [:]) {
                         def imageName = config.imageName ?: 'default-image'
                         def imageTag = config.imageTag ?: 'latest'
                         def registry = config.registry ?: 'docker.io'
-                        sh "docker tag ${imageName}:${imageTag} ${registry}/${imageName}:${imageTag}"
-                        sh "docker push ${registry}/${imageName}:${imageTag}"
+
+                        // 使用 Jenkins 凭据
+                        withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                            sh "echo ${DOCKER_PASSWORD} | docker login ${registry} --username ${DOCKER_USERNAME} --password-stdin"
+                            sh "docker tag ${imageName}:${imageTag} ${registry}/${imageName}:${imageTag}"
+                            sh "docker push ${registry}/${imageName}:${imageTag}"
+                        }
                     }
                 }
             }
